@@ -75,6 +75,7 @@ export function TeamChip({
   const stripes = T?.stripes ?? ["#ddd", "#bbb"];
   const s = seed ?? T?.seed;
 
+  const interactive = !!onClick;
   const base: CSSProperties = {
     display: "flex",
     alignItems: "center",
@@ -83,7 +84,7 @@ export function TeamChip({
     minWidth: 0,
     height: small ? 26 : 32,
     padding: variant === "square" ? "0 10px" : "0 10px 0 4px",
-    cursor: empty ? "default" : "pointer",
+    cursor: interactive ? "pointer" : empty ? "default" : "default",
     background: "var(--chip-bg)",
     color: empty ? "var(--ink-muted)" : "var(--ink)",
     border: `1px solid ${highlight ? "var(--accent)" : "var(--chip-border)"}`,
@@ -132,14 +133,16 @@ export function TeamChip({
   return (
     <button
       type="button"
-      onClick={empty ? undefined : onClick}
-      disabled={empty}
+      onClick={onClick}
+      disabled={!interactive && empty}
       style={base}
       onMouseEnter={(e) => {
-        if (!empty) (e.currentTarget as HTMLButtonElement).style.background = "var(--chip-bg-hover)";
+        if (interactive || !empty)
+          (e.currentTarget as HTMLButtonElement).style.background = "var(--chip-bg-hover)";
       }}
       onMouseLeave={(e) => {
-        if (!empty) (e.currentTarget as HTMLButtonElement).style.background = "var(--chip-bg)";
+        if (interactive || !empty)
+          (e.currentTarget as HTMLButtonElement).style.background = "var(--chip-bg)";
       }}
     >
       {variant === "pill" && seedDot}

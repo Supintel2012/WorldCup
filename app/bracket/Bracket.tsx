@@ -59,38 +59,37 @@ type OpenPicker = (
   subtitle?: string,
 ) => void;
 
-function SlotButton({
+function SlotRow({
   team,
   winner,
   settings,
   compact,
-  onOpen,
+  onAdvance,
+  onOpenPicker,
 }: {
   team: string | null;
   winner: string | null;
   settings: BracketSettings;
   compact: boolean;
-  onOpen: (anchor: PickerAnchor) => void;
+  onAdvance: (team: string) => void;
+  onOpenPicker: (anchor: PickerAnchor) => void;
 }) {
-  const btnRef = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const isWinner = !!winner && winner === team;
   const isLoser = !!winner && team !== null && winner !== team;
 
-  const handleOpen = () => {
-    if (!btnRef.current) return;
-    const r = btnRef.current.getBoundingClientRect();
-    onOpen({ x: r.left, y: r.top, width: r.width, height: r.height });
+  const handleClick = () => {
+    if (team) {
+      onAdvance(team);
+      return;
+    }
+    if (!ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    onOpenPicker({ x: r.left, y: r.top, width: r.width, height: r.height });
   };
 
   return (
-    <div
-      ref={btnRef}
-      onClick={(e) => {
-        e.stopPropagation();
-        handleOpen();
-      }}
-      style={{ cursor: "pointer" }}
-    >
+    <div ref={ref}>
       <TeamChip
         team={team}
         showSeed={settings.showSeeds}
@@ -100,7 +99,7 @@ function SlotButton({
         variant={settings.chipStyle}
         status={isWinner ? "winner" : "idle"}
         dim={isLoser}
-        onClick={handleOpen}
+        onClick={handleClick}
         small={compact}
       />
     </div>
@@ -116,6 +115,7 @@ function MatchCard({
   settings,
   compact,
   tight,
+  onAdvance,
   openPicker,
   state,
 }: {
@@ -127,23 +127,23 @@ function MatchCard({
   settings: BracketSettings;
   compact: boolean;
   tight: boolean;
+  onAdvance: (team: string) => void;
   openPicker: OpenPicker;
   state: BracketState;
 }) {
   const [a, b] = pair;
   const candidates = getSlotCandidates(round, idx);
   const title = `${ROUND_TITLES[round]} · Match ${idx + 1}`;
-  const [ap, bp] = pair;
   const subtitle =
-    ap && bp
-      ? `${TEAMS[ap].name} vs ${TEAMS[bp].name}`
-      : ap
-        ? `${TEAMS[ap].name} vs —`
-        : bp
-          ? `— vs ${TEAMS[bp].name}`
+    a && b
+      ? `${TEAMS[a].name} vs ${TEAMS[b].name}`
+      : a
+        ? `${TEAMS[a].name} vs —`
+        : b
+          ? `— vs ${TEAMS[b].name}`
           : "Pick a winner";
 
-  const openFromBlock = (anchor: PickerAnchor) => {
+  const openFromRow = (anchor: PickerAnchor) => {
     openPicker(anchor, round, idx, candidates, state.picks[round][idx], title, subtitle);
   };
 
@@ -181,19 +181,21 @@ function MatchCard({
           flex: 1,
         }}
       >
-        <SlotButton
+        <SlotRow
           team={a}
           winner={winner}
           settings={settings}
           compact={compact}
-          onOpen={openFromBlock}
+          onAdvance={onAdvance}
+          onOpenPicker={openFromRow}
         />
-        <SlotButton
+        <SlotRow
           team={b}
           winner={winner}
           settings={settings}
           compact={compact}
-          onOpen={openFromBlock}
+          onAdvance={onAdvance}
+          onOpenPicker={openFromRow}
         />
       </div>
     </div>
@@ -330,6 +332,7 @@ function FinalColumn({
   b,
   winner,
   champ,
+  onAdvance,
   openPicker,
   state,
   settings,
@@ -341,6 +344,7 @@ function FinalColumn({
   b: string | null;
   winner: string | null;
   champ: ReturnType<typeof getChamp>;
+  onAdvance: (team: string) => void;
   openPicker: OpenPicker;
   state: BracketState;
   settings: BracketSettings;
@@ -454,7 +458,7 @@ function FinalColumn({
                 lineHeight: 1.15,
               }}
             >
-              Pick the champion first
+              Pick the champion
             </div>
             <div
               style={{
@@ -497,8 +501,8 @@ function FinalColumn({
             gap: 3,
           }}
         >
-          <SlotButton team={a} winner={winner} settings={settings} compact={compact} onOpen={openFinalRow} />
-          <SlotButton team={b} winner={winner} settings={settings} compact={compact} onOpen={openFinalRow} />
+          <SlotRow team={a} winner={winner} settings={settings} compact={compact} onAdvance={onAdvance} onOpenPicker={openFinalRow} />
+          <SlotRow team={b} winner={winner} settings={settings} compact={compact} onAdvance={onAdvance} onOpenPicker={openFinalRow} />
         </div>
       </div>
     </div>
@@ -511,11 +515,13 @@ function getChamp(code: string | null) {
 
 function ThirdPlace({
   state,
+  onPick,
   openPicker,
   settings,
   compact,
 }: {
   state: BracketState;
+  onPick: OnPick;
   openPicker: OpenPicker;
   settings: BracketSettings;
   compact: boolean;
@@ -535,6 +541,8 @@ function ThirdPlace({
       a && b ? `${TEAMS[a].name} vs ${TEAMS[b].name}` : "Fill both semifinals first",
     );
   };
+
+  const onAdvanceTp = (t: string) => onPick("tp", 0, t);
 
   return (
     <div style={{ marginTop: compact ? 20 : 32, display: "flex", justifyContent: "center" }}>
@@ -571,8 +579,8 @@ function ThirdPlace({
           </span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-          <SlotButton team={a} winner={winner} settings={settings} compact={compact} onOpen={open} />
-          <SlotButton team={b} winner={winner} settings={settings} compact={compact} onOpen={open} />
+          <SlotRow team={a} winner={winner} settings={settings} compact={compact} onAdvance={onAdvanceTp} onOpenPicker={open} />
+          <SlotRow team={b} winner={winner} settings={settings} compact={compact} onAdvance={onAdvanceTp} onOpenPicker={open} />
         </div>
       </div>
     </div>
@@ -584,7 +592,7 @@ export function Bracket({
   onPick,
   onClear,
   settings,
-  compact = false,
+  compact = true,
 }: {
   state: BracketState;
   onPick: OnPick;
@@ -597,8 +605,6 @@ export function Bracket({
   const COL_W = compact ? 138 : 150;
   const GAP = compact ? 20 : 26;
   const COL_W_MID = compact ? 180 : 200;
-
-  const innerW = COL_W * 8 + GAP * 8 + COL_W_MID + 4;
 
   const [picker, setPicker] = useState<{
     open: boolean;
@@ -624,27 +630,42 @@ export function Bracket({
   };
 
   const outerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [outerHeight, setOuterHeight] = useState<number | null>(null);
 
   useLayoutEffect(() => {
-    if (!outerRef.current) return;
-    const el = outerRef.current;
-    const ro = new ResizeObserver(() => {
-      const avail = el.clientWidth;
-      if (avail <= 0) return;
-      const s = Math.min(1, avail / innerW);
+    if (!outerRef.current || !innerRef.current) return;
+    const outer = outerRef.current;
+    const inner = innerRef.current;
+    const recompute = () => {
+      const avail = outer.clientWidth;
+      const iw = inner.scrollWidth;
+      const ih = inner.scrollHeight;
+      if (!avail || !iw) return;
+      const s = Math.min(1, avail / iw);
       setScale(s);
-    });
-    ro.observe(el);
+      setOuterHeight(ih * s);
+    };
+    const ro = new ResizeObserver(recompute);
+    ro.observe(outer);
+    ro.observe(inner);
+    recompute();
     return () => ro.disconnect();
-  }, [innerW]);
+  }, [compact]);
 
   useEffect(() => {
     if (!picker.open) return;
     const onResize = () => setPicker((p) => ({ ...p, open: false, anchor: null }));
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    window.addEventListener("scroll", onResize, true);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onResize, true);
+    };
   }, [picker.open]);
+
+  const advanceFn = (round: number, idx: number) => (t: string) => onPick(round, idx, t);
 
   const renderColumn = (round: number, side: "L" | "R") => {
     const n = state.picks[round].length;
@@ -681,6 +702,7 @@ export function Bracket({
                 settings={settings}
                 compact={compact}
                 tight={round !== 0}
+                onAdvance={advanceFn(round, idx)}
                 openPicker={openPicker}
                 state={state}
               />
@@ -694,19 +716,23 @@ export function Bracket({
   const finalWinner = state.picks[4][0];
   const [fa, fb] = getMatchup(state.picks, 4, 0);
   const champ = getChamp(finalWinner);
-
-  const scaledHeight = Math.ceil(
-    (totalH + (compact ? 20 : 32) + 140) * scale,
-  );
+  const advanceFinal = (t: string) => onPick(4, 0, t);
 
   return (
-    <div ref={outerRef} style={{ width: "100%", overflow: "visible" }}>
+    <div
+      ref={outerRef}
+      style={{
+        width: "100%",
+        overflow: "hidden",
+        height: outerHeight ?? undefined,
+      }}
+    >
       <div
+        ref={innerRef}
         style={{
-          width: innerW,
+          width: "max-content",
           transform: `scale(${scale})`,
           transformOrigin: "top left",
-          height: scale < 1 ? scaledHeight : "auto",
         }}
       >
         <RoundLabels compact={compact} colW={COL_W} colWMid={COL_W_MID} gap={GAP} />
@@ -727,6 +753,7 @@ export function Bracket({
             b={fb}
             winner={finalWinner}
             champ={champ}
+            onAdvance={advanceFinal}
             openPicker={openPicker}
             state={state}
             settings={settings}
@@ -746,7 +773,7 @@ export function Bracket({
           </div>
         </div>
 
-        <ThirdPlace state={state} openPicker={openPicker} settings={settings} compact={compact} />
+        <ThirdPlace state={state} onPick={onPick} openPicker={openPicker} settings={settings} compact={compact} />
       </div>
 
       <TeamPicker
