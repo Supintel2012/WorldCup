@@ -75,10 +75,8 @@ function TeamGrid({
           padding: "6px 8px",
           borderRadius: 6,
           border: `1px solid ${picked ? "var(--glow)" : "var(--panel-border)"}`,
-          background: picked
-            ? "color-mix(in oklch, var(--glow) 28%, transparent)"
-            : "var(--panel-bg)",
-          color: disabled ? "var(--ink-faint)" : "var(--ink)",
+          background: picked ? "var(--glow)" : "var(--panel-bg)",
+          color: picked ? "#fff" : disabled ? "var(--ink-faint)" : "var(--ink)",
           cursor: disabled ? "not-allowed" : "pointer",
           fontFamily: "var(--sans)",
           fontSize: 12,
@@ -105,7 +103,7 @@ function TeamGrid({
               style={{
                 fontFamily: "var(--mono)",
                 fontSize: 9,
-                color: "var(--ink-muted)",
+                color: picked ? "rgba(255,255,255,0.7)" : "var(--ink-muted)",
                 letterSpacing: "0.05em",
               }}
             >
