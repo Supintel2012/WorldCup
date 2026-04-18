@@ -6,7 +6,7 @@ import { ChatPanel } from "./chat/ChatPanel";
 import { ChatProvider, useChat } from "./chat/ChatProvider";
 import { Confetti } from "./Confetti";
 import { GroupStage } from "./GroupStage";
-import { QuizModal, ShareModal } from "./Modals";
+import { ConfirmModal, QuizModal, ShareModal } from "./Modals";
 import { Leaderboard, btnStyle } from "./SidePanels";
 import { TrophyIcon } from "./TeamChip";
 import {
@@ -113,35 +113,35 @@ function randomSlug(): string {
 }
 
 export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }: BracketClientProps) {
-  const [settings, setSettings] = useState<BracketSettings>(() => {
-    if (typeof window === "undefined") return DEFAULT_SETTINGS;
-    try {
-      return { ...DEFAULT_SETTINGS, ...(JSON.parse(localStorage.getItem("wc26-settings") || "{}")) };
-    } catch {
-      return DEFAULT_SETTINGS;
-    }
-  });
-  const [state, setState] = useState<BracketState>(() => {
-    if (typeof window === "undefined") return makeEmptyPicks();
-    try {
-      const saved = localStorage.getItem("wc26-picks-v2");
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return makeEmptyPicks();
-  });
+  // NOTE: initial state must match the server render (no window / localStorage
+  // access here) — we hydrate from localStorage in the effect below so that
+  // the first client render matches the SSR output and React doesn't warn.
+  const [settings, setSettings] = useState<BracketSettings>(DEFAULT_SETTINGS);
+  const [state, setState] = useState<BracketState>(() => makeEmptyPicks());
+  const [hydrated, setHydrated] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showTweaks, setShowTweaks] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showClear, setShowClear] = useState(false);
   const [confetti, setConfetti] = useState(false);
   const [toast, setToast] = useState<{ champ: string } | null>(null);
   const [poolSlug, setPoolSlug] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    try {
+      const savedPicks = localStorage.getItem("wc26-picks-v2");
+      if (savedPicks) setState(JSON.parse(savedPicks));
+    } catch {}
+    try {
+      const savedSettings = localStorage.getItem("wc26-settings");
+      if (savedSettings) setSettings((prev) => ({ ...prev, ...JSON.parse(savedSettings) }));
+    } catch {}
     const params = new URLSearchParams(window.location.search);
     const slug = params.get("pool");
     if (slug) setPoolSlug(slug);
+    setHydrated(true);
   }, []);
 
   const inviteUrl = useMemo(() => {
@@ -166,15 +166,17 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     try {
       localStorage.setItem("wc26-picks-v2", JSON.stringify(state));
     } catch {}
-  }, [state]);
+  }, [state, hydrated]);
   useEffect(() => {
+    if (!hydrated) return;
     try {
       localStorage.setItem("wc26-settings", JSON.stringify(settings));
     } catch {}
-  }, [settings]);
+  }, [settings, hydrated]);
 
   const updateSetting = <K extends keyof BracketSettings>(k: K, v: BracketSettings[K]) => {
     setSettings((s) => ({ ...s, [k]: v }));
@@ -207,7 +209,14 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
   }, []);
 
   const clearAll = () => {
-    if (confirm("Clear every pick?")) setState(makeEmptyPicks());
+    setShowClear(true);
+  };
+  const confirmClear = () => {
+    setState(makeEmptyPicks());
+    setShowClear(false);
+  };
+  const toggleTheme = () => {
+    setSettings((s) => ({ ...s, theme: s.theme === "dark" ? "editorial" : "dark" }));
   };
   const applyOneClick = async () => {
     setState(await oneClick());
@@ -259,6 +268,8 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
           onShare={ensureSlugAndShare}
           onChat={() => setShowChat((v) => !v)}
           onTweaks={() => setShowTweaks((v) => !v)}
+          onToggleTheme={toggleTheme}
+          theme={settings.theme}
           chatOpen={showChat}
         />
 
@@ -297,6 +308,16 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
         {showTweaks && <TweaksPanel settings={settings} onChange={updateSetting} onClose={() => setShowTweaks(false)} />}
         <QuizModal open={showQuiz} onClose={() => setShowQuiz(false)} onApply={applyQuiz} />
         <ShareModal open={showShare} onClose={() => setShowShare(false)} state={state} inviteUrl={inviteUrl} />
+        <ConfirmModal
+          open={showClear}
+          title="Clear every pick?"
+          body="This wipes your Round-of-32 through champion selections. Your pool invite link stays the same."
+          confirmLabel="Yes, clear picks"
+          cancelLabel="Cancel"
+          onConfirm={confirmClear}
+          onClose={() => setShowClear(false)}
+          destructive
+        />
         <Confetti fire={confetti} onDone={() => setConfetti(false)} />
         {toast && (
           <ToastComplete
@@ -452,6 +473,8 @@ function Header({
   onShare,
   onChat,
   onTweaks,
+  onToggleTheme,
+  theme,
   chatOpen,
 }: {
   pct: number;
@@ -463,8 +486,11 @@ function Header({
   onShare: () => void;
   onChat: () => void;
   onTweaks: () => void;
+  onToggleTheme: () => void;
+  theme: BracketSettings["theme"];
   chatOpen: boolean;
 }) {
+  const isDark = theme === "dark";
   return (
     <header
       style={{
@@ -558,6 +584,21 @@ function Header({
             Tweaks
           </button>
           <button
+            onClick={onToggleTheme}
+            aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+            title={isDark ? "Light mode" : "Dark mode"}
+            style={{
+              ...btnStyle(),
+              padding: "5px 9px",
+              lineHeight: 1,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {isDark ? <SunIcon /> : <MoonIcon />}
+          </button>
+          <button
             onClick={onChat}
             aria-pressed={chatOpen}
             style={{
@@ -587,6 +628,23 @@ function Header({
         </div>
       </div>
     </header>
+  );
+}
+
+function SunIcon() {
+  return (
+    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx={12} cy={12} r={4} />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+    </svg>
+  );
+}
+
+function MoonIcon() {
+  return (
+    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
   );
 }
 

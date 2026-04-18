@@ -157,19 +157,31 @@ function MatchCard({
           style={{
             fontFamily: "var(--mono)",
             fontSize: 8.5,
-            letterSpacing: "0.08em",
+            letterSpacing: "0.06em",
             color: "var(--ink-muted)",
             textTransform: "uppercase",
             display: "flex",
             justifyContent: "space-between",
+            gap: 4,
             marginBottom: 2,
             padding: "0 2px",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
           }}
         >
-          <span>
+          <span style={{ flex: "0 0 auto" }}>
             {meta.date} · {meta.time}
           </span>
-          <span style={{ opacity: 0.7 }}>{meta.venue}</span>
+          <span
+            style={{
+              opacity: 0.7,
+              minWidth: 0,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {meta.venue}
+          </span>
         </div>
       )}
       <div

@@ -118,6 +118,114 @@ function TeamGrid({
   );
 }
 
+export function ConfirmModal({
+  open,
+  title,
+  body,
+  confirmLabel,
+  cancelLabel,
+  destructive,
+  onConfirm,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  body?: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  destructive?: boolean;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  if (!open) return null;
+  const accentColor = destructive ? "oklch(0.58 0.22 25)" : "var(--accent)";
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.55)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 120,
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: 420,
+          maxWidth: "90vw",
+          background: "var(--panel-bg)",
+          border: `1px solid ${accentColor}`,
+          borderRadius: 10,
+          padding: 24,
+          color: "var(--ink)",
+          boxShadow: "0 30px 80px -30px rgba(0,0,0,0.4)",
+        }}
+      >
+        <div
+          style={{
+            fontFamily: "var(--mono)",
+            fontSize: 10,
+            letterSpacing: "0.18em",
+            color: accentColor,
+            textTransform: "uppercase",
+            marginBottom: 8,
+          }}
+        >
+          {destructive ? "Heads up" : "Confirm"}
+        </div>
+        <div
+          style={{
+            fontFamily: "var(--serif)",
+            fontSize: 24,
+            fontStyle: "italic",
+            fontWeight: 500,
+            lineHeight: 1.15,
+            marginBottom: body ? 10 : 18,
+          }}
+        >
+          {title}
+        </div>
+        {body && (
+          <div
+            style={{
+              fontFamily: "var(--sans)",
+              fontSize: 13,
+              color: "var(--ink-muted)",
+              lineHeight: 1.45,
+              marginBottom: 20,
+            }}
+          >
+            {body}
+          </div>
+        )}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <button onClick={onClose} style={btnStyle()}>
+            {cancelLabel}
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{
+              ...btnStyle(),
+              background: accentColor,
+              color: "#fff",
+              border: `1px solid ${accentColor}`,
+              fontWeight: 600,
+            }}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function QuizModal({
   open,
   onClose,
