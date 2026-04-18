@@ -66,17 +66,7 @@ export function advanceTeam(
     next.picks[r][pathSlotAtRound(r)] = team;
   }
 
-  for (let r = round + 1; r < next.picks.length; r++) {
-    const slot = Math.floor(idx / Math.pow(2, r - round));
-    const occupant = next.picks[r][slot];
-    if (!occupant) continue;
-    const occR32 = findR32Index(occupant);
-    if (occR32 !== -1 && Math.floor(occR32 / Math.pow(2, round)) === idx) {
-      next.picks[r][slot] = null;
-    }
-  }
-
-  if (round <= 3) next.thirdPlace = null;
+  if (round === 3) next.thirdPlace = null;
 
   return next;
 }
@@ -197,11 +187,7 @@ export function clearSlot(state: BracketState, round: number, idx: number): Brac
     thirdPlace: state.thirdPlace,
   };
   next.picks[round][idx] = null;
-  for (let r = round + 1; r < next.picks.length; r++) {
-    const slot = Math.floor(idx / Math.pow(2, r - round));
-    if (next.picks[r][slot] === team) next.picks[r][slot] = null;
-  }
-  if (round <= 3 && next.thirdPlace === team) next.thirdPlace = null;
+  if (round === 3 && next.thirdPlace === team) next.thirdPlace = null;
   return next;
 }
 
