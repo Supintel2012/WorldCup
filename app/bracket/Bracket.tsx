@@ -22,11 +22,15 @@ export type BracketSettings = {
 
 const MATCH_H = 68;
 const MATCH_H_CMP = 56;
-// R32 matches carry a date/venue label that sits in the gap above each cell
-// (labelSpace = 12 below). The gap must be at least that tall, plus a few
-// pixels of breathing room, or the meta line overlaps the previous match.
-const R32_GAP = 20;
-const R32_GAP_CMP = 20;
+// R32 gap sizing: the date/venue meta now sits in a SIDECAR outside the column
+// (see renderColumn), so no vertical space is required for it. Keep some gap
+// for visual breathing between R32 cells.
+const R32_GAP = 14;
+const R32_GAP_CMP = 12;
+// Sidecar width for the R32 meta label sitting just outside the leftmost /
+// rightmost columns.
+const R32_META_W = 72;
+const R32_META_GAP = 8;
 
 const ROUND_TITLES = ["Round of 32", "Round of 16", "Quarterfinals", "Semifinals", "Final"];
 
@@ -121,6 +125,7 @@ function MatchCard({
   onAdvance,
   openPicker,
   state,
+  glowing,
 }: {
   pair: [string | null, string | null];
   winner: string | null;
@@ -133,6 +138,7 @@ function MatchCard({
   onAdvance: (team: string) => void;
   openPicker: OpenPicker;
   state: BracketState;
+  glowing: boolean;
 }) {
   const [a, b] = pair;
   const candidates = getSlotCandidates(round, idx);
@@ -152,48 +158,22 @@ function MatchCard({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {meta && !tight && (
-        <div
-          style={{
-            fontFamily: "var(--mono)",
-            fontSize: 8.5,
-            letterSpacing: "0.06em",
-            color: "var(--ink-muted)",
-            textTransform: "uppercase",
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 4,
-            marginBottom: 2,
-            padding: "0 2px",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-          }}
-        >
-          <span style={{ flex: "0 0 auto" }}>
-            {meta.date} · {meta.time}
-          </span>
-          <span
-            style={{
-              opacity: 0.7,
-              minWidth: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {meta.venue}
-          </span>
-        </div>
-      )}
+      {/* R32 date/time/venue is rendered as a sidecar in renderColumn so that
+          it sits OUTSIDE the card (left of L-side, right of R-side) and can't
+          overlap a neighbouring match. Keep `meta` on the prop list for type
+          compatibility. */}
       <div
         style={{
           background: "var(--match-bg)",
-          border: "1px solid var(--match-border)",
+          border: `1px solid ${glowing ? "var(--accent)" : "var(--match-border)"}`,
           borderRadius: 5,
           padding: 3,
           display: "flex",
           flexDirection: "column",
           gap: 2,
           flex: 1,
+          animation: glowing ? "bracketPulse 1.4s ease-out" : undefined,
+          transition: "border-color 200ms",
         }}
       >
         <SlotRow
@@ -354,6 +334,7 @@ function FinalColumn({
   totalH,
   compact,
   width,
+  glowing,
 }: {
   a: string | null;
   b: string | null;
@@ -366,6 +347,7 @@ function FinalColumn({
   totalH: number;
   compact: boolean;
   width: number;
+  glowing: boolean;
 }) {
   const champRef = useRef<HTMLDivElement>(null);
   const allCandidates = getSlotCandidates(4, 0);
@@ -421,6 +403,7 @@ function FinalColumn({
           borderRadius: 8,
           cursor: "pointer",
           transition: "background 120ms, border-color 120ms",
+          animation: glowing ? "bracketPulse 1.4s ease-out" : undefined,
         }}
       >
         <div
@@ -609,6 +592,7 @@ export function Bracket({
   settings,
   themeStyle,
   compact = true,
+  glow,
 }: {
   state: BracketState;
   onPick: OnPick;
@@ -616,6 +600,7 @@ export function Bracket({
   settings: BracketSettings;
   themeStyle?: CSSProperties;
   compact?: boolean;
+  glow?: Set<string>;
 }) {
   const { tops, totalH, H } = layout(compact);
 
@@ -698,7 +683,7 @@ export function Bracket({
           const [a, b] = getMatchup(state.picks, round, idx);
           const winner = state.picks[round][idx];
           const top = tops[round][idx];
-          const labelSpace = round === 0 ? 12 : 0;
+          const meta = round === 0 ? R32_META[idx] : null;
           return (
             <div
               key={`${round}-${idx}`}
@@ -706,14 +691,43 @@ export function Bracket({
                 position: "absolute",
                 left: 0,
                 right: 0,
-                top: top - labelSpace,
-                height: H + labelSpace,
+                top,
+                height: H,
               }}
             >
+              {meta && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    height: H,
+                    width: R32_META_W,
+                    [side === "L" ? "right" : "left"]: COL_W + R32_META_GAP,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    gap: 2,
+                    textAlign: side === "L" ? "right" : "left",
+                    fontFamily: "var(--mono)",
+                    fontSize: 8.5,
+                    letterSpacing: "0.08em",
+                    lineHeight: 1.15,
+                    color: "var(--ink-muted)",
+                    textTransform: "uppercase",
+                    pointerEvents: "none",
+                  }}
+                >
+                  <div style={{ color: "var(--ink)", fontWeight: 600 }}>{meta.date}</div>
+                  <div>{meta.time}</div>
+                  <div style={{ opacity: 0.75, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {meta.venue}
+                  </div>
+                </div>
+              )}
               <MatchCard
                 pair={[a, b]}
                 winner={winner}
-                meta={round === 0 ? R32_META[idx] : null}
+                meta={null}
                 round={round}
                 idx={idx}
                 settings={settings}
@@ -722,6 +736,7 @@ export function Bracket({
                 onAdvance={advanceFn(round, idx)}
                 openPicker={openPicker}
                 state={state}
+                glowing={glow?.has(`${round}-${idx}`) ?? false}
               />
             </div>
           );
@@ -777,6 +792,7 @@ export function Bracket({
             totalH={totalH}
             compact={compact}
             width={COL_W_MID}
+            glowing={glow?.has("4-0") ?? false}
           />
 
           <div style={{ display: "flex", gap: GAP, flex: "0 0 auto" }}>

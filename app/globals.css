@@ -10,6 +10,12 @@
   --pitch-stripe-2: #0a4742;
 }
 
+@keyframes bracketPulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in oklch, var(--accent) 60%, transparent); }
+  55%  { box-shadow: 0 0 0 6px color-mix(in oklch, var(--accent) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
 html, body {
   background: radial-gradient(ellipse at top, #082f2c 0%, #051917 70%);
   color: #f5f3ef;

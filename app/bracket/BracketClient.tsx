@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Bracket, type BracketSettings } from "./Bracket";
+import { MobileBracket } from "./MobileBracket";
 import { ChatPanel } from "./chat/ChatPanel";
 import { ChatProvider, useChat } from "./chat/ChatProvider";
 import { Confetti } from "./Confetti";
@@ -127,6 +128,9 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
   const [confetti, setConfetti] = useState(false);
   const [toast, setToast] = useState<{ champ: string } | null>(null);
   const [poolSlug, setPoolSlug] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [glow, setGlow] = useState<Set<string>>(new Set());
+  const glowTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -142,6 +146,15 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
     const slug = params.get("pool");
     if (slug) setPoolSlug(slug);
     setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 900px)");
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => setIsMobile(e.matches);
+    handler(mq);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
   }, []);
 
   const inviteUrl = useMemo(() => {
@@ -189,6 +202,19 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
     }
     setState((s) => {
       const next = advanceTeam(s, round as number, idx, team);
+      if (typeof round === "number" && round >= 1) {
+        const changed = new Set<string>();
+        for (let r = 0; r < round; r++) {
+          for (let i = 0; i < s.picks[r].length; i++) {
+            if (s.picks[r][i] !== next.picks[r][i]) changed.add(`${r}-${i}`);
+          }
+        }
+        if (changed.size > 0) {
+          setGlow(changed);
+          if (glowTimerRef.current) window.clearTimeout(glowTimerRef.current);
+          glowTimerRef.current = window.setTimeout(() => setGlow(new Set()), 1600);
+        }
+      }
       if (!isComplete(s) && isComplete(next)) {
         setTimeout(() => setConfetti(true), 200);
         setTimeout(() => {
@@ -271,27 +297,48 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
           onToggleTheme={toggleTheme}
           theme={settings.theme}
           chatOpen={showChat}
+          isMobile={isMobile}
         />
 
         <main
           style={{
             maxWidth: 1640,
             margin: "0 auto",
-            padding: "22px 28px 60px",
+            padding: isMobile ? "16px 14px 60px" : "22px 28px 60px",
             display: "flex",
             flexDirection: "column",
-            gap: 24,
+            gap: isMobile ? 18 : 24,
             minWidth: 0,
           }}
         >
-          <HeroStrip state={state} />
-          <section>
-            <SectionHeader title="Group Stage" kicker="12 groups · June 11 – June 15" />
-            <GroupStage compact />
-          </section>
+          <HeroStrip state={state} isMobile={isMobile} />
+          {!isMobile && (
+            <section>
+              <SectionHeader title="Group Stage" kicker="12 groups · June 11 – June 15" />
+              <GroupStage compact />
+            </section>
+          )}
           <section>
             <SectionHeader title="Knockout Bracket" kicker="Click any slot · pick the final first, back-fill the rest" />
-            <Bracket state={state} onPick={onPick} onClear={onClear} settings={settings} themeStyle={themeStyle} />
+            {isMobile ? (
+              <MobileBracket
+                state={state}
+                onPick={onPick}
+                onClear={onClear}
+                settings={settings}
+                themeStyle={themeStyle}
+                glow={glow}
+              />
+            ) : (
+              <Bracket
+                state={state}
+                onPick={onPick}
+                onClear={onClear}
+                settings={settings}
+                themeStyle={themeStyle}
+                glow={glow}
+              />
+            )}
           </section>
         </main>
 
@@ -476,6 +523,7 @@ function Header({
   onToggleTheme,
   theme,
   chatOpen,
+  isMobile,
 }: {
   pct: number;
   done: number;
@@ -489,6 +537,7 @@ function Header({
   onToggleTheme: () => void;
   theme: BracketSettings["theme"];
   chatOpen: boolean;
+  isMobile: boolean;
 }) {
   const isDark = theme === "dark";
   return (
@@ -506,10 +555,12 @@ function Header({
         style={{
           maxWidth: 1640,
           margin: "0 auto",
-          padding: "10px 28px",
+          padding: isMobile ? "8px 14px" : "10px 28px",
           display: "grid",
-          gridTemplateColumns: "minmax(240px, auto) 1fr minmax(380px, auto)",
-          gap: 24,
+          gridTemplateColumns: isMobile
+            ? "1fr auto"
+            : "minmax(240px, auto) 1fr minmax(380px, auto)",
+          gap: isMobile ? 10 : 24,
           alignItems: "center",
         }}
       >
@@ -544,45 +595,53 @@ function Header({
           </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 14, justifyContent: "center" }}>
-          <div
-            style={{
-              fontFamily: "var(--mono)",
-              fontSize: 10,
-              letterSpacing: "0.14em",
-              color: "var(--ink-muted)",
-              textTransform: "uppercase",
-            }}
-          >
-            {done}/{total} picks
-          </div>
-          <div style={{ width: 260, height: 4, borderRadius: 2, background: "var(--rule)", overflow: "hidden", position: "relative" }}>
+        {!isMobile && (
+          <div style={{ display: "flex", alignItems: "center", gap: 14, justifyContent: "center" }}>
             <div
               style={{
-                position: "absolute",
-                inset: 0,
-                width: `${pct}%`,
-                background: "linear-gradient(90deg, var(--c-red), var(--c-blue) 50%, var(--c-green))",
-                transition: "width 300ms ease",
+                fontFamily: "var(--mono)",
+                fontSize: 10,
+                letterSpacing: "0.14em",
+                color: "var(--ink-muted)",
+                textTransform: "uppercase",
               }}
-            />
+            >
+              {done}/{total} picks
+            </div>
+            <div style={{ width: 260, height: 4, borderRadius: 2, background: "var(--rule)", overflow: "hidden", position: "relative" }}>
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: `${pct}%`,
+                  background: "linear-gradient(90deg, var(--c-red), var(--c-blue) 50%, var(--c-green))",
+                  transition: "width 300ms ease",
+                }}
+              />
+            </div>
+            <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink)", width: 30 }}>{pct}%</div>
           </div>
-          <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink)", width: 30 }}>{pct}%</div>
-        </div>
+        )}
 
-        <div style={{ display: "flex", gap: 6 }}>
-          <button style={btnStyle()} onClick={onOneClick}>
-            1-click bracket
-          </button>
-          <button style={btnStyle()} onClick={onQuiz}>
-            3-question quiz
-          </button>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          {!isMobile && (
+            <button style={btnStyle()} onClick={onOneClick}>
+              1-click bracket
+            </button>
+          )}
+          {!isMobile && (
+            <button style={btnStyle()} onClick={onQuiz}>
+              3-question quiz
+            </button>
+          )}
           <button style={btnStyle()} onClick={onClear}>
             Clear
           </button>
-          <button style={btnStyle()} onClick={onTweaks}>
-            Tweaks
-          </button>
+          {!isMobile && (
+            <button style={btnStyle()} onClick={onTweaks}>
+              Tweaks
+            </button>
+          )}
           <button
             onClick={onToggleTheme}
             aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
@@ -671,11 +730,18 @@ function Logo() {
   );
 }
 
-function HeroStrip({ state }: { state: BracketState }) {
+function HeroStrip({ state, isMobile }: { state: BracketState; isMobile: boolean }) {
   const champ = state.picks[4][0];
   const champTeam = champ ? TEAMS[champ] : null;
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 1fr", gap: 14, alignItems: "stretch" }}>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr 1fr 1fr",
+        gap: isMobile ? 10 : 14,
+        alignItems: "stretch",
+      }}
+    >
       <div
         style={{
           padding: "18px 20px",
@@ -715,9 +781,9 @@ function HeroStrip({ state }: { state: BracketState }) {
             : "Click a team in the Round of 32 to advance them, or skip to the final and work backwards."}
         </div>
       </div>
-      <HeroStat k="Round of 32" v="16 matches" sub="Jun 18 – 21" />
-      <HeroStat k="First match" v="Arg · Hai" sub="Jun 18 · 12:00 ET" accent />
-      <HeroStat k="Final" v="MetLife" sub="Jul 12 · 15:00 ET" />
+      {!isMobile && <HeroStat k="Round of 32" v="16 matches" sub="Jun 18 – 21" />}
+      {!isMobile && <HeroStat k="First match" v="Arg · Hai" sub="Jun 18 · 12:00 ET" accent />}
+      {!isMobile && <HeroStat k="Final" v="MetLife" sub="Jul 12 · 15:00 ET" />}
     </div>
   );
 }
