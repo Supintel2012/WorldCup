@@ -8,11 +8,12 @@
 :root {
   --pitch-stripe-1: #0d5c56;
   --pitch-stripe-2: #0a4742;
+  --glow: oklch(0.72 0.12 180);
 }
 
 @keyframes bracketPulse {
-  0%   { box-shadow: 0 0 0 0 color-mix(in oklch, var(--accent) 60%, transparent); }
-  55%  { box-shadow: 0 0 0 6px color-mix(in oklch, var(--accent) 0%, transparent); }
+  0%   { box-shadow: 0 0 0 0 color-mix(in oklch, var(--glow) 70%, transparent); }
+  55%  { box-shadow: 0 0 0 6px color-mix(in oklch, var(--glow) 0%, transparent); }
   100% { box-shadow: 0 0 0 0 transparent; }
 }
 

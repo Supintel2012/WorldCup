@@ -165,7 +165,7 @@ function MatchCard({
       <div
         style={{
           background: "var(--match-bg)",
-          border: `1px solid ${glowing ? "var(--accent)" : "var(--match-border)"}`,
+          border: `1px solid ${glowing ? "var(--glow)" : "var(--match-border)"}`,
           borderRadius: 5,
           padding: 3,
           display: "flex",

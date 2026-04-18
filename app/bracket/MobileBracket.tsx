@@ -291,7 +291,7 @@ function MobileMatchCard({
     <div
       style={{
         background: "var(--match-bg)",
-        border: `1px solid ${glowing ? "var(--accent)" : "var(--match-border)"}`,
+        border: `1px solid ${glowing ? "var(--glow)" : "var(--match-border)"}`,
         borderRadius: 8,
         padding: "10px 12px",
         display: "flex",

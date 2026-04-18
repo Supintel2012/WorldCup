@@ -197,7 +197,17 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
 
   const onPick = useCallback((round: number | "tp", idx: number, team: string) => {
     if (round === "tp") {
-      setState((s) => ({ ...s, thirdPlace: team }));
+      setState((s) => {
+        const next = { ...s, thirdPlace: team };
+        if (!isComplete(s) && isComplete(next)) {
+          setTimeout(() => setConfetti(true), 200);
+          setTimeout(() => {
+            const champ = next.picks[4][0];
+            if (champ) setToast({ champ });
+          }, 400);
+        }
+        return next;
+      });
       return;
     }
     setState((s) => {
