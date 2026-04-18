@@ -132,6 +132,7 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
   const [showQuiz, setShowQuiz] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [showTweaks, setShowTweaks] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const [confetti, setConfetti] = useState(false);
   const [toast, setToast] = useState<{ champ: string } | null>(null);
   const [poolSlug, setPoolSlug] = useState<string | null>(null);
@@ -256,7 +257,9 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
           onQuiz={() => setShowQuiz(true)}
           onClear={clearAll}
           onShare={ensureSlugAndShare}
+          onChat={() => setShowChat((v) => !v)}
           onTweaks={() => setShowTweaks((v) => !v)}
+          chatOpen={showChat}
         />
 
         <main
@@ -264,35 +267,32 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
             maxWidth: 1640,
             margin: "0 auto",
             padding: "22px 28px 60px",
-            display: "grid",
-            gridTemplateColumns: "minmax(0, 1fr) 320px",
-            gap: 28,
-            alignItems: "start",
+            display: "flex",
+            flexDirection: "column",
+            gap: 24,
+            minWidth: 0,
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
-            <HeroStrip state={state} />
-            <section>
-              <SectionHeader title="Group Stage" kicker="12 groups · June 11 – June 15" />
-              <GroupStage compact />
-            </section>
-            <section>
-              <SectionHeader title="Knockout Bracket" kicker="Click any slot · pick the final first, back-fill the rest" />
-              <Bracket state={state} onPick={onPick} onClear={onClear} settings={settings} themeStyle={themeStyle} />
-            </section>
-          </div>
-
-          <aside style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <LeaderboardConnector
-              myChampion={state.picks[4][0]}
-              pickCount={done}
-              totalPicks={total}
-              onInvite={ensureSlugAndShare}
-            />
-            <UpcomingCard state={state} />
-            <ChatPanel onStartChat={ensureSlugAndShare} />
-          </aside>
+          <HeroStrip state={state} />
+          <section>
+            <SectionHeader title="Group Stage" kicker="12 groups · June 11 – June 15" />
+            <GroupStage compact />
+          </section>
+          <section>
+            <SectionHeader title="Knockout Bracket" kicker="Click any slot · pick the final first, back-fill the rest" />
+            <Bracket state={state} onPick={onPick} onClear={onClear} settings={settings} themeStyle={themeStyle} />
+          </section>
         </main>
+
+        <ChatDrawer
+          open={showChat}
+          onClose={() => setShowChat(false)}
+          state={state}
+          done={done}
+          total={total}
+          onInvite={ensureSlugAndShare}
+          onStartChat={ensureSlugAndShare}
+        />
 
         {showTweaks && <TweaksPanel settings={settings} onChange={updateSetting} onClose={() => setShowTweaks(false)} />}
         <QuizModal open={showQuiz} onClose={() => setShowQuiz(false)} onApply={applyQuiz} />
@@ -310,6 +310,104 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
         )}
       </div>
     </ChatProvider>
+  );
+}
+
+function ChatDrawer({
+  open,
+  onClose,
+  state,
+  done,
+  total,
+  onInvite,
+  onStartChat,
+}: {
+  open: boolean;
+  onClose: () => void;
+  state: BracketState;
+  done: number;
+  total: number;
+  onInvite: () => void;
+  onStartChat: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.35)",
+          zIndex: 90,
+        }}
+      />
+      <aside
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: 380,
+          maxWidth: "100vw",
+          background: "var(--paper)",
+          borderLeft: "1px solid var(--panel-border)",
+          zIndex: 91,
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: "-20px 0 40px -20px rgba(0,0,0,0.35)",
+        }}
+      >
+        <div
+          style={{
+            padding: "12px 16px",
+            borderBottom: "1px solid var(--panel-border)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            background: "var(--panel-bg)",
+          }}
+        >
+          <div style={{ fontFamily: "var(--serif)", fontSize: 18, fontStyle: "italic", fontWeight: 500, lineHeight: 1 }}>
+            Pool &amp; chat
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Close chat"
+            style={{
+              border: "none",
+              background: "transparent",
+              color: "var(--ink-muted)",
+              fontSize: 22,
+              lineHeight: 1,
+              cursor: "pointer",
+              padding: 0,
+            }}
+          >
+            ×
+          </button>
+        </div>
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: 14,
+            display: "flex",
+            flexDirection: "column",
+            gap: 14,
+          }}
+        >
+          <LeaderboardConnector
+            myChampion={state.picks[4][0]}
+            pickCount={done}
+            totalPicks={total}
+            onInvite={onInvite}
+          />
+          <UpcomingCard state={state} />
+          <ChatPanel onStartChat={onStartChat} />
+        </div>
+      </aside>
+    </>
   );
 }
 
@@ -352,7 +450,9 @@ function Header({
   onQuiz,
   onClear,
   onShare,
+  onChat,
   onTweaks,
+  chatOpen,
 }: {
   pct: number;
   done: number;
@@ -361,7 +461,9 @@ function Header({
   onQuiz: () => void;
   onClear: () => void;
   onShare: () => void;
+  onChat: () => void;
   onTweaks: () => void;
+  chatOpen: boolean;
 }) {
   return (
     <header
@@ -454,6 +556,21 @@ function Header({
           </button>
           <button style={btnStyle()} onClick={onTweaks}>
             Tweaks
+          </button>
+          <button
+            onClick={onChat}
+            aria-pressed={chatOpen}
+            style={{
+              ...btnStyle(),
+              background: chatOpen
+                ? "var(--accent)"
+                : "color-mix(in oklch, var(--accent) 12%, transparent)",
+              color: chatOpen ? "#fff" : "var(--accent)",
+              border: "1px solid var(--accent)",
+              fontWeight: 600,
+            }}
+          >
+            Chat
           </button>
           <button
             onClick={onShare}

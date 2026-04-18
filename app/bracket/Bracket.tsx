@@ -22,8 +22,11 @@ export type BracketSettings = {
 
 const MATCH_H = 68;
 const MATCH_H_CMP = 56;
-const R32_GAP = 10;
-const R32_GAP_CMP = 6;
+// R32 matches carry a date/venue label that sits in the gap above each cell
+// (labelSpace = 12 below). The gap must be at least that tall, plus a few
+// pixels of breathing room, or the meta line overlaps the previous match.
+const R32_GAP = 20;
+const R32_GAP_CMP = 20;
 
 const ROUND_TITLES = ["Round of 32", "Round of 16", "Quarterfinals", "Semifinals", "Final"];
 
