@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --pitch-stripe-1: #0d5c56;
+  --pitch-stripe-2: #0a4742;
+}
+
+html, body {
+  background: radial-gradient(ellipse at top, #082f2c 0%, #051917 70%);
+  color: #f5f3ef;
+  min-height: 100vh;
+}
+
+@layer components {
+  .pitch-pattern {
+    background-image: repeating-linear-gradient(
+      90deg,
+      var(--pitch-stripe-1) 0px,
+      var(--pitch-stripe-1) 80px,
+      var(--pitch-stripe-2) 80px,
+      var(--pitch-stripe-2) 160px
+    );
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono font-medium;
+  }
+
+  .btn {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-150;
+  }
+
+  .btn-primary {
+    @apply btn bg-gold text-navy hover:bg-gold-dim hover:shadow-glow;
+  }
+
+  .btn-ghost {
+    @apply btn glass text-cream-50 hover:bg-white/10;
+  }
+
+  .card {
+    @apply glass rounded-xl p-5 shadow-card hover:shadow-hover transition-shadow;
+  }
+}

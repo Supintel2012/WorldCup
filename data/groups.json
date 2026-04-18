@@ -1,0 +1,48 @@
+{
+  "format": {
+    "groups": 12,
+    "teamsPerGroup": 4,
+    "advanceFirstTwo": 24,
+    "advanceBestThirds": 8,
+    "knockoutFrom": "Round of 32",
+    "playIn": {
+      "note": "FIFA 2026 format — the 8 best third-place finishers (out of 12) advance, analogous to the NCAA 'First Four' play-in. We surface these as pre-knockout probabilistic matchups.",
+      "slots": 8,
+      "candidates": 12
+    }
+  },
+  "groups": [
+    {"code": "A", "venue": "Mexico City",    "teams": ["MEX", "CRO", "ECU", "PAN"]},
+    {"code": "B", "venue": "Los Angeles",    "teams": ["USA", "ITA", "IRN", "CRC"]},
+    {"code": "C", "venue": "Toronto",        "teams": ["CAN", "URU", "AUS", "JAM"]},
+    {"code": "D", "venue": "Philadelphia",   "teams": ["ARG", "COL", "KSA", "PAR"]},
+    {"code": "E", "venue": "Kansas City",    "teams": ["BRA", "JPN", "POL", "UZB"]},
+    {"code": "F", "venue": "Atlanta",        "teams": ["ESP", "MAR", "TUN", "IRQ"]},
+    {"code": "G", "venue": "Seattle",        "teams": ["FRA", "DEN", "NOR", "JOR"]},
+    {"code": "H", "venue": "Miami",          "teams": ["ENG", "SUI", "UKR", "CMR"]},
+    {"code": "I", "venue": "Dallas",         "teams": ["GER", "AUT", "EGY", "GHA"]},
+    {"code": "J", "venue": "Boston",         "teams": ["POR", "SRB", "NGA", "NZL"]},
+    {"code": "K", "venue": "New York/NJ",    "teams": ["NED", "SEN", "ALG", "COD"]},
+    {"code": "L", "venue": "Houston",        "teams": ["BEL", "KOR", "CIV", "BOL"]}
+  ],
+  "knockoutBracket": {
+    "roundOf32": [
+      {"match": "R32-1",  "slotA": "1A",  "slotB": "2F"},
+      {"match": "R32-2",  "slotA": "1C",  "slotB": "3D/E/F"},
+      {"match": "R32-3",  "slotA": "1E",  "slotB": "2B"},
+      {"match": "R32-4",  "slotA": "1G",  "slotB": "3A/B/C"},
+      {"match": "R32-5",  "slotA": "1I",  "slotB": "2H"},
+      {"match": "R32-6",  "slotA": "1K",  "slotB": "3E/F/G/H"},
+      {"match": "R32-7",  "slotA": "2A",  "slotB": "2C"},
+      {"match": "R32-8",  "slotA": "2D",  "slotB": "2J"},
+      {"match": "R32-9",  "slotA": "1B",  "slotB": "3A/B/C/D"},
+      {"match": "R32-10", "slotA": "1D",  "slotB": "2E"},
+      {"match": "R32-11", "slotA": "1F",  "slotB": "3A/C/D/H"},
+      {"match": "R32-12", "slotA": "1H",  "slotB": "2G"},
+      {"match": "R32-13", "slotA": "1J",  "slotB": "2I"},
+      {"match": "R32-14", "slotA": "1L",  "slotB": "3B/E/F/I"},
+      {"match": "R32-15", "slotA": "2K",  "slotB": "2L"},
+      {"match": "R32-16", "slotA": "3G/H/I/J", "slotB": "3D/F/G/J"}
+    ]
+  }
+}
