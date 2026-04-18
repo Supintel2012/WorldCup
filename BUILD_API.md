@@ -62,8 +62,9 @@ Response:
 
 ### `POST /bracket/quiz`
 
-Takes the three-question quiz answers and returns picks biased toward the
-user's champion, dark horse, and chaos preference (the server's counterpart to
+Takes the three-question quiz answers — which teams are popular in the user's
+pool, which they think are overrated, and which they think are underrated —
+and returns picks biased by that read of the field (the server's counterpart to
 `autoFillFromQuiz`).
 
 Request:
@@ -71,14 +72,14 @@ Request:
 ```json
 {
   "sport": "wc26",
-  "champion": "ARG",
-  "darkHorse": "MAR",
-  "upsetTolerance": "med"
+  "popular": ["ARG", "FRA", "BRA"],
+  "overrated": ["GER"],
+  "underrated": ["MAR", "JPN"]
 }
 ```
 
-`upsetTolerance` is one of `"low" | "med" | "high"` (Chalky / Balanced /
-Chaotic). Response shape matches `/bracket/one-click`.
+All three arrays are capped client-side at `popular ≤ 3`, `overrated ≤ 2`,
+`underrated ≤ 2`. Response shape matches `/bracket/one-click`.
 
 ### Optional: `POST /bracket/save`
 

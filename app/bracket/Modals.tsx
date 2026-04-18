@@ -1,43 +1,121 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { btnStyle } from "./SidePanels";
+import { FlagSvg } from "./TeamChip";
 import { TEAMS } from "./wc-data";
 import type { BracketState, QuizAnswers } from "./wc-logic";
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div
-        style={{
-          fontFamily: "var(--mono)",
-          fontSize: 10,
-          letterSpacing: "0.14em",
-          textTransform: "uppercase",
-          color: "var(--ink-muted)",
-          marginBottom: 6,
-        }}
-      >
-        {label}
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+        <div
+          style={{
+            fontFamily: "var(--mono)",
+            fontSize: 10,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: "var(--ink-muted)",
+          }}
+        >
+          {label}
+        </div>
+        {hint && (
+          <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--ink-faint)" }}>{hint}</div>
+        )}
       </div>
       {children}
     </div>
   );
 }
 
-function selectStyle(): React.CSSProperties {
-  return {
-    width: "100%",
-    padding: "8px 10px",
-    borderRadius: 6,
-    border: "1px solid var(--panel-border)",
-    background: "var(--chip-bg)",
-    color: "var(--ink)",
-    fontSize: 13,
-    fontFamily: "var(--sans)",
-    cursor: "pointer",
-    outline: "none",
-  };
+function TeamGrid({
+  pool,
+  selected,
+  limit,
+  onToggle,
+}: {
+  pool: string[];
+  selected: string[];
+  limit: number;
+  onToggle: (code: string) => void;
+}) {
+  const isFull = selected.length >= limit;
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+        gap: 6,
+        maxHeight: 176,
+        overflowY: "auto",
+        padding: 4,
+        border: "1px solid var(--panel-border)",
+        borderRadius: 8,
+        background: "var(--chip-bg)",
+      }}
+    >
+      {pool.map((code) => {
+        const T = TEAMS[code];
+        const picked = selected.includes(code);
+        const disabled = !picked && isFull;
+        const style: CSSProperties = {
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "6px 8px",
+          borderRadius: 6,
+          border: `1px solid ${picked ? "var(--accent)" : "var(--panel-border)"}`,
+          background: picked
+            ? "color-mix(in oklch, var(--accent) 18%, transparent)"
+            : "var(--panel-bg)",
+          color: disabled ? "var(--ink-faint)" : "var(--ink)",
+          cursor: disabled ? "not-allowed" : "pointer",
+          fontFamily: "var(--sans)",
+          fontSize: 12,
+          fontWeight: picked ? 600 : 500,
+          opacity: disabled ? 0.5 : 1,
+          textAlign: "left",
+        };
+        return (
+          <button
+            key={code}
+            type="button"
+            onClick={() => {
+              if (disabled) return;
+              onToggle(code);
+            }}
+            disabled={disabled}
+            style={style}
+          >
+            <FlagSvg stripes={T.stripes} w={16} h={11} radius={2} />
+            <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {T.name}
+            </span>
+            <span
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: 9,
+                color: "var(--ink-muted)",
+                letterSpacing: "0.05em",
+              }}
+            >
+              {T.seed}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export function QuizModal({
@@ -49,20 +127,38 @@ export function QuizModal({
   onClose: () => void;
   onApply: (q: QuizAnswers) => void | Promise<void>;
 }) {
-  const [champion, setChampion] = useState("ARG");
-  const [darkHorse, setDarkHorse] = useState("MAR");
-  const [upset, setUpset] = useState<"low" | "med" | "high">("med");
+  const [popular, setPopular] = useState<string[]>([]);
+  const [overrated, setOverrated] = useState<string[]>([]);
+  const [underrated, setUnderrated] = useState<string[]>([]);
   if (!open) return null;
 
-  const topTeams = Object.keys(TEAMS).filter((k) => TEAMS[k].seed <= 2);
-  const allTeams = Object.keys(TEAMS);
+  const toggleIn = (
+    list: string[],
+    setter: (v: string[]) => void,
+    limit: number,
+  ) => (code: string) => {
+    if (list.includes(code)) {
+      setter(list.filter((c) => c !== code));
+      return;
+    }
+    if (list.length >= limit) return;
+    setter([...list, code]);
+  };
+
+  const allTeams = Object.keys(TEAMS).sort((a, b) => {
+    const sa = TEAMS[a].seed, sb = TEAMS[b].seed;
+    if (sa !== sb) return sa - sb;
+    return TEAMS[a].name.localeCompare(TEAMS[b].name);
+  });
+
+  const canSubmit = popular.length > 0 || overrated.length > 0 || underrated.length > 0;
 
   return (
     <div
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.45)",
+        background: "rgba(0,0,0,0.55)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -73,70 +169,34 @@ export function QuizModal({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          width: 520,
-          maxWidth: "90vw",
+          width: 580,
+          maxWidth: "92vw",
+          maxHeight: "90vh",
+          overflowY: "auto",
           background: "var(--panel-bg)",
           border: "1px solid var(--panel-border)",
           borderRadius: 10,
           padding: 24,
+          color: "var(--ink)",
         }}
       >
         <div style={{ fontFamily: "var(--serif)", fontSize: 26, fontWeight: 500, fontStyle: "italic", lineHeight: 1.1, marginBottom: 4 }}>
           Three questions, one bracket.
         </div>
         <div style={{ fontFamily: "var(--sans)", fontSize: 13, color: "var(--ink-muted)", marginBottom: 20 }}>
-          We&apos;ll fill the rest using your instincts. You can still edit anything after.
+          Tap teams to toggle. We&apos;ll lean the bracket on your read of the pool. You can still edit anything after.
         </div>
 
-        <Field label="1 — Who lifts the trophy?">
-          <select value={champion} onChange={(e) => setChampion(e.target.value)} style={selectStyle()}>
-            {topTeams.map((k) => (
-              <option key={k} value={k}>
-                {TEAMS[k].name}
-              </option>
-            ))}
-          </select>
+        <Field label="1 — Who are popular in your pool?" hint={`${popular.length} / 3`}>
+          <TeamGrid pool={allTeams} selected={popular} limit={3} onToggle={toggleIn(popular, setPopular, 3)} />
         </Field>
 
-        <Field label="2 — Pick one dark horse to make a deep run.">
-          <select value={darkHorse} onChange={(e) => setDarkHorse(e.target.value)} style={selectStyle()}>
-            {allTeams
-              .filter((k) => TEAMS[k].seed >= 3 || k !== champion)
-              .map((k) => (
-                <option key={k} value={k}>
-                  {TEAMS[k].name} · seed {TEAMS[k].seed}
-                </option>
-              ))}
-          </select>
+        <Field label="2 — Who are overrated?" hint={`${overrated.length} / 2`}>
+          <TeamGrid pool={allTeams} selected={overrated} limit={2} onToggle={toggleIn(overrated, setOverrated, 2)} />
         </Field>
 
-        <Field label="3 — How chaotic are your brackets?">
-          <div style={{ display: "flex", gap: 6 }}>
-            {([
-              ["low", "Chalky"],
-              ["med", "Balanced"],
-              ["high", "Chaotic"],
-            ] as const).map(([val, lbl]) => (
-              <button
-                key={val}
-                onClick={() => setUpset(val)}
-                style={{
-                  flex: 1,
-                  padding: "8px 10px",
-                  borderRadius: 6,
-                  border: `1px solid ${upset === val ? "var(--accent)" : "var(--panel-border)"}`,
-                  background: upset === val ? "color-mix(in oklch, var(--accent) 12%, transparent)" : "var(--chip-bg)",
-                  color: "var(--ink)",
-                  fontSize: 12,
-                  fontFamily: "var(--sans)",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                }}
-              >
-                {lbl}
-              </button>
-            ))}
-          </div>
+        <Field label="3 — Who are underrated?" hint={`${underrated.length} / 2`}>
+          <TeamGrid pool={allTeams} selected={underrated} limit={2} onToggle={toggleIn(underrated, setUnderrated, 2)} />
         </Field>
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 20 }}>
@@ -144,16 +204,18 @@ export function QuizModal({
             Cancel
           </button>
           <button
+            disabled={!canSubmit}
             onClick={async () => {
-              await onApply({ champion, darkHorse, upsetTolerance: upset });
+              await onApply({ popular, overrated, underrated });
               onClose();
             }}
             style={{
               ...btnStyle(),
-              background: "var(--accent)",
-              color: "#fff",
-              border: "1px solid var(--accent)",
+              background: canSubmit ? "var(--accent)" : "var(--chip-bg)",
+              color: canSubmit ? "#fff" : "var(--ink-faint)",
+              border: `1px solid ${canSubmit ? "var(--accent)" : "var(--panel-border)"}`,
               fontWeight: 600,
+              cursor: canSubmit ? "pointer" : "not-allowed",
             }}
           >
             Generate bracket →

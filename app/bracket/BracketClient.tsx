@@ -185,9 +185,8 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
     return { ...t, "--accent": ACCENTS[settings.accent] ?? ACCENTS.red };
   }, [settings.theme, settings.accent]);
 
-  const rootStyle: CSSProperties = {
+  const themeStyle = useMemo<CSSProperties>(() => ({
     ...(themeVars as CSSProperties),
-    // typography + seed/accent tokens
     ["--sans" as string]: '"Geist", "Söhne", "Helvetica Neue", Helvetica, Arial, sans-serif',
     ["--serif" as string]: '"Instrument Serif", "Times New Roman", serif',
     ["--mono" as string]: '"JetBrains Mono", "SF Mono", ui-monospace, monospace',
@@ -198,6 +197,10 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
     ["--c-red" as string]: "oklch(0.62 0.21 25)",
     ["--c-blue" as string]: "oklch(0.55 0.19 255)",
     ["--c-green" as string]: "oklch(0.65 0.17 150)",
+  }), [themeVars]);
+
+  const rootStyle: CSSProperties = {
+    ...themeStyle,
     background: "var(--paper)",
     color: "var(--ink)",
     minHeight: "100vh",
@@ -236,7 +239,7 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
           </section>
           <section>
             <SectionHeader title="Knockout Bracket" kicker="Click any slot · pick the final first, back-fill the rest" />
-            <Bracket state={state} onPick={onPick} onClear={onClear} settings={settings} />
+            <Bracket state={state} onPick={onPick} onClear={onClear} settings={settings} themeStyle={themeStyle} />
           </section>
         </div>
 

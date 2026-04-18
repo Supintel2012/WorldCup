@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { FlagSvg, TeamChip, TrophyIcon, type ChipVariant } from "./TeamChip";
 import { TeamPicker, type PickerAnchor } from "./TeamPicker";
 import {
@@ -592,12 +592,14 @@ export function Bracket({
   onPick,
   onClear,
   settings,
+  themeStyle,
   compact = true,
 }: {
   state: BracketState;
   onPick: OnPick;
   onClear: OnClear;
   settings: BracketSettings;
+  themeStyle?: CSSProperties;
   compact?: boolean;
 }) {
   const { tops, totalH, H } = layout(compact);
@@ -783,6 +785,7 @@ export function Bracket({
         anchor={picker.anchor}
         title={picker.title}
         subtitle={picker.subtitle}
+        themeStyle={themeStyle}
         onSelect={(team) => onPick(picker.round, picker.idx, team)}
         onClear={() => onClear(picker.round, picker.idx)}
         onClose={() => setPicker((p) => ({ ...p, open: false }))}

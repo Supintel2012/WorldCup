@@ -21,6 +21,7 @@ export function TeamPicker({
   anchor,
   title,
   subtitle,
+  themeStyle,
   onSelect,
   onClear,
   onClose,
@@ -31,6 +32,7 @@ export function TeamPicker({
   anchor: PickerAnchor | null;
   title: string;
   subtitle?: string;
+  themeStyle?: CSSProperties;
   onSelect: (team: string) => void;
   onClear: () => void;
   onClose: () => void;
@@ -85,6 +87,7 @@ export function TeamPicker({
   });
 
   const style: CSSProperties = {
+    ...(themeStyle ?? {}),
     position: "fixed",
     top: pos.top,
     left: pos.left,
@@ -94,7 +97,7 @@ export function TeamPicker({
     background: "var(--panel-bg)",
     border: "1px solid var(--panel-border)",
     borderRadius: 12,
-    boxShadow: "0 28px 60px -18px rgba(0,0,0,0.45)",
+    boxShadow: "0 28px 60px -18px rgba(0,0,0,0.55)",
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",

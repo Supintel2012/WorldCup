@@ -69,11 +69,10 @@ export function advanceTeam(
   for (let r = round + 1; r < next.picks.length; r++) {
     const slot = Math.floor(idx / Math.pow(2, r - round));
     const occupant = next.picks[r][slot];
-    if (occupant && occupant !== team) {
-      const occR32 = findR32Index(occupant);
-      if (occR32 !== -1 && Math.floor(occR32 / Math.pow(2, round)) === idx) {
-        next.picks[r][slot] = null;
-      }
+    if (!occupant) continue;
+    const occR32 = findR32Index(occupant);
+    if (occR32 !== -1 && Math.floor(occR32 / Math.pow(2, round)) === idx) {
+      next.picks[r][slot] = null;
     }
   }
 
@@ -117,18 +116,20 @@ export function autoFillBySeed(): BracketState {
 }
 
 export type QuizAnswers = {
-  champion: string;
-  darkHorse: string;
-  upsetTolerance: "low" | "med" | "high";
+  popular: string[];
+  overrated: string[];
+  underrated: string[];
 };
 
 export function autoFillFromQuiz(q: QuizAnswers): BracketState {
   const state = makeEmptyPicks();
-  const upset = { low: 0.1, med: 0.35, high: 0.6 }[q.upsetTolerance ?? "med"];
 
-  const seedInit = (q.champion + q.darkHorse + q.upsetTolerance)
-    .split("")
-    .reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0;
+  const popular = new Set(q.popular);
+  const overrated = new Set(q.overrated);
+  const underrated = new Set(q.underrated);
+
+  const seedKey = [...q.popular, ...q.overrated, ...q.underrated].join("|") || "wc26";
+  const seedInit = seedKey.split("").reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0;
   let s = seedInit || 1;
   const rnd = () => {
     s = (s * 1664525 + 1013904223) >>> 0;
@@ -136,16 +137,18 @@ export function autoFillFromQuiz(q: QuizAnswers): BracketState {
   };
 
   const pref = (code: string) => {
-    if (code === q.champion) return -3;
-    if (code === q.darkHorse) return -1.5;
-    return TEAMS[code].seed;
+    const base = TEAMS[code].seed;
+    if (popular.has(code)) return base - 2.5;
+    if (underrated.has(code)) return base - 1.5;
+    if (overrated.has(code)) return base + 2;
+    return base;
   };
 
   const winner = (a: string | null, b: string | null): string | null => {
     if (!a) return b;
     if (!b) return a;
     let pa = pref(a), pb = pref(b);
-    if (rnd() < upset) [pa, pb] = [pb, pa];
+    if (rnd() < 0.28) [pa, pb] = [pb, pa];
     return pa <= pb ? a : b;
   };
 
@@ -153,16 +156,20 @@ export function autoFillFromQuiz(q: QuizAnswers): BracketState {
     const [a, b] = KNOCKOUT_SEEDING[i];
     state.picks[0][i] = winner(a, b);
   }
-  const champIdx = findR32Index(q.champion);
-  if (champIdx !== -1) state.picks[0][champIdx] = q.champion;
+
+  const topPopular = q.popular
+    .slice()
+    .sort((a, b) => pref(a) - pref(b))[0];
+  const champIdx = topPopular ? findR32Index(topPopular) : -1;
+  if (champIdx !== -1 && topPopular) state.picks[0][champIdx] = topPopular;
 
   for (let r = 1; r < NUM_ROUNDS; r++) {
     for (let i = 0; i < state.picks[r].length; i++) {
       state.picks[r][i] = winner(state.picks[r - 1][i * 2], state.picks[r - 1][i * 2 + 1]);
     }
-    if (champIdx !== -1) {
+    if (champIdx !== -1 && topPopular) {
       const slot = Math.floor(champIdx / Math.pow(2, r));
-      state.picks[r][slot] = q.champion;
+      state.picks[r][slot] = topPopular;
     }
   }
   const [tpA, tpB] = getThirdPlaceMatchup(state);
