@@ -230,14 +230,56 @@ export function ShareModal({
   open,
   onClose,
   state,
+  inviteUrl,
 }: {
   open: boolean;
   onClose: () => void;
   state: BracketState;
+  inviteUrl: string | null;
 }) {
+  const [copied, setCopied] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   if (!open) return null;
   const champ = state.picks[4][0];
-  const champName = champ ? TEAMS[champ].name : "—";
+  const champName = champ ? TEAMS[champ].name : "your pick";
+
+  const url = inviteUrl ?? "";
+  const msg = champ
+    ? `I've got ${champName} lifting the cup — join my WC26 bracket pool: ${url}`
+    : `Join my WC26 bracket pool: ${url}`;
+
+  const flash = (s: string) => {
+    setToast(s);
+    setTimeout(() => setToast(null), 1400);
+  };
+
+  const hasNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+  const onCopy = async () => {
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1400);
+    } catch {
+      flash("copy failed — select the link manually");
+    }
+  };
+
+  const onNative = async () => {
+    if (!hasNativeShare || !url) return;
+    try {
+      await navigator.share({ title: "WC26 bracket pool", text: msg, url });
+    } catch {
+      // user cancelled — ignore
+    }
+  };
+
+  const open_ = (href: string) => {
+    if (typeof window === "undefined") return;
+    window.open(href, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div
       style={{
@@ -266,7 +308,7 @@ export function ShareModal({
           Share your bracket.
         </div>
         <div style={{ fontFamily: "var(--sans)", fontSize: 13, color: "var(--ink-muted)", marginBottom: 16 }}>
-          Your friends can submit their own picks and ride along.
+          Anyone with this link can submit their own picks and chat in the pool.
         </div>
 
         <div
@@ -279,9 +321,10 @@ export function ShareModal({
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: 12,
           }}
         >
-          <div>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div
               style={{
                 fontFamily: "var(--mono)",
@@ -293,19 +336,65 @@ export function ShareModal({
             >
               Your pool link
             </div>
-            <div style={{ fontFamily: "var(--mono)", fontSize: 12, marginTop: 3 }}>smartbracket.io/p/wc26-group-chat</div>
+            <div
+              style={{
+                fontFamily: "var(--mono)",
+                fontSize: 12,
+                marginTop: 3,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+              title={url}
+            >
+              {url || "generating…"}
+            </div>
           </div>
-          <button style={btnStyle()} onClick={() => alert("Copied!")}>
-            Copy
+          <button style={btnStyle()} onClick={onCopy} disabled={!url}>
+            {copied ? "Copied ✓" : "Copy"}
           </button>
         </div>
 
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {["Copy link", "iMessage", "WhatsApp", "Email", "QR code"].map((x) => (
-            <button key={x} style={btnStyle()} onClick={() => alert(`${x} share coming up`)}>
-              {x}
+          {hasNativeShare && (
+            <button style={btnStyle()} onClick={onNative} disabled={!url}>
+              Share…
             </button>
-          ))}
+          )}
+          <button
+            style={btnStyle()}
+            onClick={() => open_(`sms:&body=${encodeURIComponent(msg)}`)}
+            disabled={!url}
+          >
+            iMessage / SMS
+          </button>
+          <button
+            style={btnStyle()}
+            onClick={() => open_(`https://wa.me/?text=${encodeURIComponent(msg)}`)}
+            disabled={!url}
+          >
+            WhatsApp
+          </button>
+          <button
+            style={btnStyle()}
+            onClick={() =>
+              open_(
+                `mailto:?subject=${encodeURIComponent("Join my WC26 bracket pool")}&body=${encodeURIComponent(msg)}`,
+              )
+            }
+            disabled={!url}
+          >
+            Email
+          </button>
+          <button
+            style={btnStyle()}
+            onClick={() =>
+              open_(`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}`)
+            }
+            disabled={!url}
+          >
+            QR code
+          </button>
         </div>
 
         <div
@@ -321,6 +410,19 @@ export function ShareModal({
             <strong>Your pick:</strong> {champName} to win it all. Friends get <strong>3 days</strong> to submit before tip-off.
           </div>
         </div>
+
+        {toast && (
+          <div
+            style={{
+              marginTop: 10,
+              fontFamily: "var(--mono)",
+              fontSize: 11,
+              color: "var(--ink-muted)",
+            }}
+          >
+            {toast}
+          </div>
+        )}
 
         <div style={{ textAlign: "right", marginTop: 16 }}>
           <button onClick={onClose} style={btnStyle()}>

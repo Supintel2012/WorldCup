@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Bracket, type BracketSettings } from "./Bracket";
+import { ChatPanel } from "./chat/ChatPanel";
+import { ChatProvider, useChat } from "./chat/ChatProvider";
 import { Confetti } from "./Confetti";
 import { GroupStage } from "./GroupStage";
 import { QuizModal, ShareModal } from "./Modals";
-import { ChatWidget, Leaderboard, btnStyle } from "./SidePanels";
+import { Leaderboard, btnStyle } from "./SidePanels";
 import { TrophyIcon } from "./TeamChip";
 import {
   countPicks,
@@ -103,6 +105,13 @@ export type BracketClientProps = {
   quiz?: QuizFn;
 };
 
+function randomSlug(): string {
+  const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+  let s = "";
+  for (let i = 0; i < 6; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return `wc26-${s}`;
+}
+
 export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }: BracketClientProps) {
   const [settings, setSettings] = useState<BracketSettings>(() => {
     if (typeof window === "undefined") return DEFAULT_SETTINGS;
@@ -125,6 +134,35 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
   const [showTweaks, setShowTweaks] = useState(false);
   const [confetti, setConfetti] = useState(false);
   const [toast, setToast] = useState<{ champ: string } | null>(null);
+  const [poolSlug, setPoolSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const slug = params.get("pool");
+    if (slug) setPoolSlug(slug);
+  }, []);
+
+  const inviteUrl = useMemo(() => {
+    if (!poolSlug) return null;
+    if (typeof window === "undefined") return null;
+    const base = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+    return `${base.replace(/\/$/, "")}/bracket?pool=${encodeURIComponent(poolSlug)}`;
+  }, [poolSlug]);
+
+  const ensureSlugAndShare = useCallback(() => {
+    setPoolSlug((prev) => {
+      const slug = prev ?? randomSlug();
+      if (!prev && typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        params.set("pool", slug);
+        const newUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+        window.history.replaceState(null, "", newUrl);
+      }
+      return slug;
+    });
+    setShowShare(true);
+  }, []);
 
   useEffect(() => {
     try {
@@ -208,63 +246,101 @@ export function BracketClient({ oneClick = defaultOneClick, quiz = defaultQuiz }
   };
 
   return (
-    <div style={rootStyle}>
-      <Header
-        pct={pct}
-        done={done}
-        total={total}
-        onOneClick={applyOneClick}
-        onQuiz={() => setShowQuiz(true)}
-        onClear={clearAll}
-        onShare={() => setShowShare(true)}
-        onTweaks={() => setShowTweaks((v) => !v)}
-      />
-
-      <main
-        style={{
-          maxWidth: 1640,
-          margin: "0 auto",
-          padding: "22px 28px 60px",
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) 320px",
-          gap: 28,
-          alignItems: "start",
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
-          <HeroStrip state={state} />
-          <section>
-            <SectionHeader title="Group Stage" kicker="12 groups · June 11 – June 15" />
-            <GroupStage compact />
-          </section>
-          <section>
-            <SectionHeader title="Knockout Bracket" kicker="Click any slot · pick the final first, back-fill the rest" />
-            <Bracket state={state} onPick={onPick} onClear={onClear} settings={settings} themeStyle={themeStyle} />
-          </section>
-        </div>
-
-        <aside style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <Leaderboard myChampion={state.picks[4][0]} pickCount={done} totalPicks={total} />
-          <UpcomingCard state={state} />
-          <ChatWidget />
-        </aside>
-      </main>
-
-      {showTweaks && <TweaksPanel settings={settings} onChange={updateSetting} onClose={() => setShowTweaks(false)} />}
-      <QuizModal open={showQuiz} onClose={() => setShowQuiz(false)} onApply={applyQuiz} />
-      <ShareModal open={showShare} onClose={() => setShowShare(false)} state={state} />
-      <Confetti fire={confetti} onDone={() => setConfetti(false)} />
-      {toast && (
-        <ToastComplete
-          champ={toast.champ}
-          onClose={() => setToast(null)}
-          onShare={() => {
-            setToast(null);
-            setShowShare(true);
-          }}
+    <ChatProvider poolSlug={poolSlug} poolName={null}>
+      <div style={rootStyle}>
+        <Header
+          pct={pct}
+          done={done}
+          total={total}
+          onOneClick={applyOneClick}
+          onQuiz={() => setShowQuiz(true)}
+          onClear={clearAll}
+          onShare={ensureSlugAndShare}
+          onTweaks={() => setShowTweaks((v) => !v)}
         />
-      )}
-    </div>
+
+        <main
+          style={{
+            maxWidth: 1640,
+            margin: "0 auto",
+            padding: "22px 28px 60px",
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) 320px",
+            gap: 28,
+            alignItems: "start",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 24, minWidth: 0 }}>
+            <HeroStrip state={state} />
+            <section>
+              <SectionHeader title="Group Stage" kicker="12 groups · June 11 – June 15" />
+              <GroupStage compact />
+            </section>
+            <section>
+              <SectionHeader title="Knockout Bracket" kicker="Click any slot · pick the final first, back-fill the rest" />
+              <Bracket state={state} onPick={onPick} onClear={onClear} settings={settings} themeStyle={themeStyle} />
+            </section>
+          </div>
+
+          <aside style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <LeaderboardConnector
+              myChampion={state.picks[4][0]}
+              pickCount={done}
+              totalPicks={total}
+              onInvite={ensureSlugAndShare}
+            />
+            <UpcomingCard state={state} />
+            <ChatPanel onStartChat={ensureSlugAndShare} />
+          </aside>
+        </main>
+
+        {showTweaks && <TweaksPanel settings={settings} onChange={updateSetting} onClose={() => setShowTweaks(false)} />}
+        <QuizModal open={showQuiz} onClose={() => setShowQuiz(false)} onApply={applyQuiz} />
+        <ShareModal open={showShare} onClose={() => setShowShare(false)} state={state} inviteUrl={inviteUrl} />
+        <Confetti fire={confetti} onDone={() => setConfetti(false)} />
+        {toast && (
+          <ToastComplete
+            champ={toast.champ}
+            onClose={() => setToast(null)}
+            onShare={() => {
+              setToast(null);
+              ensureSlugAndShare();
+            }}
+          />
+        )}
+      </div>
+    </ChatProvider>
+  );
+}
+
+function LeaderboardConnector({
+  myChampion,
+  pickCount,
+  totalPicks,
+  onInvite,
+}: {
+  myChampion: string | null;
+  pickCount: number;
+  totalPicks: number;
+  onInvite: () => void;
+}) {
+  const { members, openDM, setTarget } = useChat();
+  const onDMByName = (displayName: string) => {
+    const norm = displayName.trim().toLowerCase();
+    const hit = members.find((m) => m.display_name.toLowerCase() === norm);
+    if (!hit) return false;
+    openDM(hit.user_id);
+    setTarget({ kind: "dm", userId: hit.user_id });
+    return true;
+  };
+  return (
+    <Leaderboard
+      myChampion={myChampion}
+      pickCount={pickCount}
+      totalPicks={totalPicks}
+      onInvite={onInvite}
+      onDMByName={onDMByName}
+    />
   );
 }
 
