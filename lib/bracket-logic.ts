@@ -62,6 +62,33 @@ export function simulateAllGroups(sims = 3000) {
 }
 
 /**
+ * Same as simulateAllGroups, but takes the teams/groups rosters as arguments
+ * so callers can source them from the DB instead of the bundled JSON.
+ */
+export function simulateAllGroupsWith(
+  groups: Array<{ code: string; teams: string[] }>,
+  teamsByCode: Map<string, Team>,
+  sims = 3000,
+) {
+  const allResults: Record<string, ReturnType<typeof simulateGroup>> = {};
+  for (const g of groups) {
+    const roster = g.teams.map((c) => teamsByCode.get(c)).filter((t): t is Team => !!t);
+    allResults[g.code] = simulateGroup(roster, sims);
+  }
+  const thirdPlaceCandidates = Object.entries(allResults).flatMap(([groupCode, teams]) =>
+    teams.map((t) => ({
+      groupCode,
+      teamCode: t.code,
+      thirdProb: t.finishProb.third,
+      advanceProb: t.advanceProb,
+    })),
+  );
+  thirdPlaceCandidates.sort((a, b) => b.thirdProb - a.thirdProb);
+  const playInAdvancers = thirdPlaceCandidates.slice(0, 8);
+  return { allResults, playInAdvancers };
+}
+
+/**
  * Build the Round of 32 bracket by pairing group winners/runners-up with
  * best third-placed advancers. Returns match-by-match win probabilities.
  */
