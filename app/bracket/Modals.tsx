@@ -74,9 +74,9 @@ function TeamGrid({
           gap: 8,
           padding: "6px 8px",
           borderRadius: 6,
-          border: `1px solid ${picked ? "var(--accent)" : "var(--panel-border)"}`,
+          border: `1px solid ${picked ? "var(--glow)" : "var(--panel-border)"}`,
           background: picked
-            ? "color-mix(in oklch, var(--accent) 18%, transparent)"
+            ? "color-mix(in oklch, var(--glow) 28%, transparent)"
             : "var(--panel-bg)",
           color: disabled ? "var(--ink-faint)" : "var(--ink)",
           cursor: disabled ? "not-allowed" : "pointer",
@@ -319,9 +319,9 @@ export function QuizModal({
             }}
             style={{
               ...btnStyle(),
-              background: canSubmit ? "var(--accent)" : "var(--chip-bg)",
+              background: canSubmit ? "var(--glow)" : "var(--chip-bg)",
               color: canSubmit ? "#fff" : "var(--ink-faint)",
-              border: `1px solid ${canSubmit ? "var(--accent)" : "var(--panel-border)"}`,
+              border: `1px solid ${canSubmit ? "var(--glow)" : "var(--panel-border)"}`,
               fontWeight: 600,
               cursor: canSubmit ? "pointer" : "not-allowed",
             }}
